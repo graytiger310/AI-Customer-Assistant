@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { sendMessage } from '../api';
 
-const ChatWindow = ({ username }) => {
+const ChatWindow = ({ username, isAdmin }) => {
   const [messages, setMessages] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [currentMenu, setCurrentMenu] = useState('main');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    console.log('ChatWindow mounted, isOpen:', isOpen); // Debug log
     if (isOpen) scrollToBottom();
     if (isOpen && messages.length === 0) showMainOptions();
   }, [isOpen]);
@@ -17,18 +18,28 @@ const ChatWindow = ({ username }) => {
   };
 
   const showMainOptions = () => {
+    const options = isAdmin
+      ? 'Hi Admin! How can I assist you today? Pick an option:\n1. Manage Products\n2. View Orders\n3. AI Product Query'
+      : 'Hi! How can I assist you today? Pick an option:\n1. About Products\n2. Order Statuses\n3. Refunds\n4. Store Policies\n5. AI Product Query';
     setMessages((prev) => [
       ...prev,
       {
-        text: 'Hi! How can I assist you today? Pick an option:\n1. About Products\n2. Order Statuses\n3. Refunds\n4. Store Policies',
+        text: options,
         sender: 'bot',
         timestamp: new Date(),
-        clickableOptions: [
-          { text: '1. About Products', action: () => setCurrentMenu('products') },
-          { text: '2. Order Statuses', action: () => setCurrentMenu('orders') },
-          { text: '3. Refunds', action: () => setCurrentMenu('refunds') },
-          { text: '4. Store Policies', action: () => setCurrentMenu('policies') },
-        ],
+        clickableOptions: isAdmin
+          ? [
+              { text: '1. Manage Products', action: () => alert('Redirect to Admin Panel') },
+              { text: '2. View Orders', action: () => fetchOrders() },
+              { text: '3. AI Product Query', action: handleAIQuery },
+            ]
+          : [
+              { text: '1. About Products', action: () => setCurrentMenu('products') },
+              { text: '2. Order Statuses', action: () => setCurrentMenu('orders') },
+              { text: '3. Refunds', action: () => setCurrentMenu('refunds') },
+              { text: '4. Store Policies', action: () => setCurrentMenu('policies') },
+              { text: '5. AI Product Query', action: handleAIQuery },
+            ],
       },
     ]);
     setCurrentMenu('main');
@@ -38,7 +49,7 @@ const ChatWindow = ({ username }) => {
     setMessages((prev) => [...prev, { text: option.text, sender: 'user', timestamp: new Date() }]);
     option.action();
 
-    if (currentMenu === 'main') {
+    if (currentMenu === 'main' && !isAdmin) {
       if (option.text === '1. About Products') {
         setMessages((prev) => [
           ...prev,
@@ -96,22 +107,12 @@ const ChatWindow = ({ username }) => {
       const response = await sendMessage({ message: 'past_orders', username });
       setMessages((prev) => [
         ...prev,
-        {
-          text: `${response.reply}\nBack to Main Options`,
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: `${response.reply}\nBack to Main Options`, sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          text: 'Error fetching past orders.\nBack to Main Options',
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: 'Error fetching past orders.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     }
   };
@@ -121,22 +122,12 @@ const ChatWindow = ({ username }) => {
       const response = await sendMessage({ message: 'cancelled_orders', username });
       setMessages((prev) => [
         ...prev,
-        {
-          text: `${response.reply}\nBack to Main Options`,
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: `${response.reply}\nBack to Main Options`, sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          text: 'Error fetching cancelled orders.\nBack to Main Options',
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: 'Error fetching cancelled orders.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     }
   };
@@ -160,12 +151,22 @@ const ChatWindow = ({ username }) => {
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          text: 'Error fetching order statuses.\nBack to Main Options',
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: 'Error fetching order statuses.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
+      ]);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const response = await sendMessage({ message: 'all_orders', username });
+      setMessages((prev) => [
+        ...prev,
+        { text: `${response.reply}\nBack to Main Options`, sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
+      ]);
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { text: 'Error fetching orders.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     }
   };
@@ -175,22 +176,12 @@ const ChatWindow = ({ username }) => {
       const response = await sendMessage({ message: `status_${orderId}`, username });
       setMessages((prev) => [
         ...prev,
-        {
-          text: `${response.reply}\nBack to Main Options`,
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: `${response.reply}\nBack to Main Options`, sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     } catch (error) {
       setMessages((prev) => [
         ...prev,
-        {
-          text: 'Error fetching order status.\nBack to Main Options',
-          sender: 'bot',
-          timestamp: new Date(),
-          clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-        },
+        { text: 'Error fetching order status.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
       ]);
     }
   };
@@ -198,13 +189,31 @@ const ChatWindow = ({ username }) => {
   const handleRefund = (orderId) => {
     setMessages((prev) => [
       ...prev,
-      {
-        text: `Refund for Order #${orderId}: Contact support with receipt within 30 days.\nBack to Main Options`,
-        sender: 'bot',
-        timestamp: new Date(),
-        clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }],
-      },
+      { text: `Refund for Order #${orderId}: Contact support with receipt within 30 days.\nBack to Main Options`, sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
     ]);
+  };
+
+  const handleAIQuery = () => {
+    const query = prompt('Ask about a product (e.g., "Tell me about Laptop") or order status (e.g., "Status of ORD001"):');
+    if (query) {
+      setMessages((prev) => [...prev, { text: query, sender: 'user', timestamp: new Date() }]);
+      if (query.toLowerCase().includes('laptop')) {
+        setMessages((prev) => [
+          ...prev,
+          { text: 'The Laptop is a high-performance device with 16GB RAM, 512GB SSD, and Intel i7 processor. Price: ₹45,000.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
+        ]);
+      } else if (query.toLowerCase().includes('status of ord001')) {
+        setMessages((prev) => [
+          ...prev,
+          { text: 'Order #ORD001 is currently shipped as of April 10, 2025.\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { text: 'Sorry, I couldn’t find that. Try asking about a specific product or order!\nBack to Main Options', sender: 'bot', timestamp: new Date(), clickableOptions: [{ text: 'Back to Main Options', action: showMainOptions }] },
+        ]);
+      }
+    }
   };
 
   const toggleChat = () => setIsOpen(!isOpen);
@@ -259,10 +268,46 @@ const ChatWindow = ({ username }) => {
 };
 
 const styles = {
-  minimized: { position: 'fixed', bottom: '20px', right: '20px', width: '50px', height: '50px', background: '#00c4cc', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 1000, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' },
+  minimized: {
+    position: 'fixed',
+    bottom: '20px',
+    right: '20px',
+    width: '50px',
+    height: '50px',
+    background: '#00c4cc',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    zIndex: 2000, // Increased z-index
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  },
   logo: { fontSize: '24px', color: '#fff' },
-  chatContainer: { position: 'fixed', bottom: '80px', right: '20px', width: '320px', height: '450px', background: '#fff', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', zIndex: 1000 },
-  header: { padding: '12px', background: '#2c3e50', color: '#fff', borderRadius: '10px 10px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '16px', fontWeight: 'bold' },
+  chatContainer: {
+    position: 'fixed',
+    bottom: '80px',
+    right: '20px',
+    width: '320px',
+    height: '450px',
+    background: '#fff',
+    borderRadius: '10px',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    zIndex: 2000, // Increased z-index
+  },
+  header: {
+    padding: '12px',
+    background: '#2c3e50',
+    color: '#fff',
+    borderRadius: '10px 10px 0 0',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    fontSize: '16px',
+    fontWeight: 'bold',
+  },
   closeButton: { background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer' },
   messages: { flex: 1, overflowY: 'auto', padding: '10px', background: '#fff' },
   botMessage: { textAlign: 'left', margin: '8px 0', maxWidth: '75%', background: '#e0f7fa', borderRadius: '8px', padding: '8px', color: '#333' },
